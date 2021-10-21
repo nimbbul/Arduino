@@ -49,10 +49,12 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(13, 12, 9, 8, 4);
 
 void setup() {
 
-
+Serial.begin(9600);
+Serial.println("ok");
+Serial.println(flag);//
+Serial.println(flag_LCD);//  
   
-  
-
+Serial.print("Flag pompa :");Serial.println(pompa_in_flag);
  
   pinMode(dataPin, INPUT);
   pinMode(clockPin, INPUT);
@@ -61,25 +63,17 @@ void setup() {
   pinMode(relay_pomp_out, OUTPUT);
   pinMode(humidity_relay_Pin, OUTPUT);
 
-
-lower_level_Data = analogRead(lower_level_pin);
 upper_level_Data = analogRead(upper_level_pin);
-lower_level_Data = map(lower_level_Data, 0, 500, 0, 5);
 upper_level_Data = map(upper_level_Data, 0, 500, 0, 5);
-lower_level_Data = constrain(lower_level_Data, 0, 5);
 upper_level_Data= constrain(upper_level_Data, 0, 5);
 
- if ( lower_level_Data == 0) {
-  pompa_in_flag = 0;
- }
-  else if (upper_level_Data > 0 ){
+
+  if (upper_level_Data > 0 ){
     pompa_in_flag =1;
   }
 
-Serial.begin(9600);
-Serial.println("ok");
-Serial.println(flag);//
-Serial.println(flag_LCD);//
+
+
 
 Serial.println("-----------------------------");
 Serial.print("Flag pompa :");Serial.println(pompa_in_flag);
