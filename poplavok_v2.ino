@@ -3,6 +3,8 @@
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
+#include <microDS3231.h>
+MicroDS3231 rtc;  //часы
 
 
 #define dataPin  10
@@ -33,14 +35,18 @@ boolean relay_flag = false;
 boolean A = false;
 uint32_t tmr;
 boolean flag = true;
+boolean flag1 = true;
+boolean flag2 = true;
 boolean flag_LCD ;
 uint32_t myTimer_tmp_humi;
 uint32_t lCD_tmr;
 uint32_t myTimer_level_sensor;
 
-#define period2 20*1000L  //20 секунд
-//#define period2 60*15*1000L  // 15 минут
-#define period1 60*1000L  // 1 минутa
+#define period2 40*1000L  //40 секунд
+#define period3 60*5*1000L  // 5 минут
+#define period1 60*2*1000L  // 2 min
+//#define period1 60*1000L  // 1 минутa
+//#define period3 60*120*1000L  // 2часа
 
 Adafruit_PCD8544 display = Adafruit_PCD8544(13, 12, 9, 8, 4);
 
@@ -49,8 +55,25 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(13, 12, 9, 8, 4);
 
 void setup() {
 
+ rtc.setTime(BUILD_SEC, BUILD_MIN, BUILD_HOUR, BUILD_DAY, BUILD_MONTH, BUILD_YEAR);
+
 Serial.begin(9600);
 Serial.println("ok");
+
+
+  // проверка наличия модуля на линии i2c
+  // вызов rtc.begin() не обязателен для работы
+ if (!rtc.begin()) {
+    Serial.println("DS3231 not found");
+    for(;;);
+  }
+
+   if (rtc.lostPower()) {            // выполнится при сбросе батарейки
+    Serial.println("lost power!");
+    // тут можно однократно установить время == времени компиляции
+  }
+  
+  
 Serial.println(flag);//
 Serial.println(flag_LCD);//  
   
@@ -90,6 +113,15 @@ Serial.print("Flag pompa :");Serial.println(pompa_in_flag);
 
 
 void loop() {
+
+  Serial.print(rtc.getHours());
+  Serial.print(":");
+  Serial.print(rtc.getMinutes());
+  Serial.print(":");
+  Serial.print(rtc.getSeconds());
+  Serial.print(" ");
+
+  Serial.println();
  
 
 lower_level_Data = analogRead(lower_level_pin);
@@ -139,7 +171,14 @@ if (millis() - myTimer_level_sensor >= 3000) {
  }    
  }   
 //  Serial.println("----------88888----------");
-   if (millis() - tmr >= (flag ? period1 : period2)) { //включаем насос на вкачивание period1=1min period2=20sec
+//if ((rtc.getHours()>6)&&(rtc.getHours()<0))
+//{
+
+ if (rtc.getHours()>=18) {
+     if ( rtc.getHours()<=23 && rtc.getMinutes()<=59)
+  
+ {
+   if (millis() - tmr >= (flag ? period1 : period2)) { //включаем насос на вкачивание period1=3min period2=30sec
     tmr = millis();
    // flag = !flag;
     digitalWrite(relay_pomp_out, flag);
@@ -154,11 +193,85 @@ Serial.println("-----------------------------");
     
   
      flag = !flag;
+   }
+ } 
+  }
+
+ if (rtc.getHours()>=0) {
+     if ( rtc.getHours()<=11 && rtc.getMinutes()<=59)
+  
+ {
+
+
+   if (millis() - tmr >= (flag1 ? period1 : period2)) { //включаем насос на вкачивание period1=3min period2=40sec
+    tmr = millis();
+   // flag = !flag;
+    digitalWrite(relay_pomp_out, flag1);
+    //digitalWrite(led_Pin, flag);
+    Serial.println("-----------------------------");
+     Serial.println("насос на впрыск");
+      Serial.print("Flag: "); Serial.println(flag);
+     flag_LCD = flag1;
+     Serial.print("Flag_LCD: "); Serial.println(flag_LCD);
+  
+Serial.println("-----------------------------");
     
+  
+     flag1 = !flag1;
+   }
+ } 
   }
 
 
+  if (rtc.getHours()>=12) 
+    {  
+     
+     if (rtc.getHours()<=17 && rtc.getMinutes()<=59){   
+    
+   if (millis() - tmr >= (flag2 ? period3 : period2)) { //включаем насос на вкачивание period3=7min period2=40sec
+    tmr = millis();
+   // flag = !flag;
+    digitalWrite(relay_pomp_out, flag2);
+    //digitalWrite(led_Pin, flag);
+    Serial.println("-----------------------------");
+     Serial.println("насос на впрыск");
+      Serial.print("Flag: "); Serial.println(flag);
+     flag_LCD = flag2;
+     Serial.print("Flag_LCD: "); Serial.println(flag_LCD);
+  
+Serial.println("-----------------------------");
+    
+  
+     flag2 = !flag2;
+   }
+ } 
+  }
 
+
+  
+//}
+//if  ((rtc.getHours()>=0 )&&(rtc.getHours()<=6))
+//{
+//  
+//   if (millis() - tmr >= (flag ? period3 : period2)) { //включаем насос на вкачивание period3=10мин period2=20sec
+//    tmr = millis();
+//   // flag = !flag;
+//    digitalWrite(relay_pomp_out, flag);
+//    //digitalWrite(led_Pin, flag);
+//    Serial.println("-----------------------------");
+//     Serial.println("насос на впрыск");
+//      Serial.print("Flag: "); Serial.println(flag);
+//     flag_LCD = flag;
+//     Serial.print("Flag_LCD: "); Serial.println(flag_LCD);
+//  
+//Serial.println("-----------------------------");
+//    
+//  
+//     flag = !flag;
+//    
+//   }
+//  
+//}
   
  if (millis() - myTimer_tmp_humi >= 20000) {
   myTimer_tmp_humi = millis();  
@@ -209,9 +322,10 @@ lCD_tmr = millis();
   display.setCursor(0, 0);
   display.println("Humidity:"); 
    display.setCursor(52, 0);
-  display.println(humidity);
+   display.println(rtc.getHours());
+  //display.println(humidity);
    display.setCursor(65, 0);
-  display.println("%");
+  display.println("H");
   
 
    if (A==1){
@@ -241,6 +355,12 @@ lCD_tmr = millis();
     display.println(temp_c, DEC);
      display.setCursor(44, 40);
     display.println("C");
+    //display.setCursor(0, 50);
+   // display.println("Clock:");
+   // display.setCursor(30, 50);
+//  display.println(rtc.getHours());
+    
+    
   display.display(); 
          
   
